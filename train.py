@@ -269,7 +269,8 @@ class Trainer():
 
         #  we are not currently going through the each entire dataset,
         #  instead we are sampling from it
-        num_outer_updates = int(self.num_epochs * self.total_train_examples / self.args.num_inner_updates)
+        num_outer_updates = int(self.num_epochs * self.total_train_examples /
+                                self.args.num_inner_updates / self.args.num_tasks / self.args.batch_size)
         with torch.enable_grad(), tqdm(total=num_outer_updates) as progress_bar:
             for global_idx in range(num_outer_updates):
                 # self.log.info(f'Epoch: {epoch_num}')
