@@ -1,0 +1,6 @@
+
+
+#### run maml - reptile
+python train.py --do-train --run-name baseline
+python train.py --do-train --run-name maml --meta-update original
+
