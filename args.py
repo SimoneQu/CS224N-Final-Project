@@ -30,7 +30,7 @@ def init_parser():
     parser.add_argument('--inner-lr', type=float, default=1e-3)
     parser.add_argument('--task-weight', type=str, default="proportional")
     parser.add_argument('--meta-update', type=str, default="reptile")
-    parser.add_argument('--meta-lr', type=float, default=5e-5)
+    parser.add_argument('--meta-lr', type=float, default=1e-3)
 
     return parser
 
