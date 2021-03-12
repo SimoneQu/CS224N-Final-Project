@@ -67,9 +67,9 @@ def count(data_file):
 
 if __name__ == '__main__':
     random.seed(2021)
-    # folder = os.path.join(os.getcwd(), "datasets", "indomain_train")
-    folder = os.path.join(os.getcwd(), "datasets", "indomain_val")
-    folder_to_write = os.path.join(os.getcwd(), "datasets_subsample", "indomain_val")
+    folder = os.path.join(os.getcwd(), "datasets", "indomain_train")
+    # folder = os.path.join(os.getcwd(), "datasets", "indomain_val")
+    folder_to_write = os.path.join(os.getcwd(), "datasets_subsample", "indomain_train")
     if not os.path.exists(folder_to_write):
         os.mkdir(folder_to_write)
     for filename in ['nat_questions', 'newsqa', 'squad']:
