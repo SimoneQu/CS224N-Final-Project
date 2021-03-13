@@ -297,8 +297,10 @@ class Trainer():
                             end_positions=end_positions
                         )
                         loss = outputs[0]
-                        if (global_idx % 1) == 0:
-                            print('inner_loop', task, i, loss.data)
+                        # if (global_idx % 1) == 0:
+                        print('inner_loop', task, i, loss.data)
+                        self.log.info(f'inner_loop: {task}, {i}, {loss.data}')
+                        
                         loss.backward()
                         optim_sub.step()
 
