@@ -46,9 +46,9 @@ def get_debug_args(run_name="maml", meta_update="reptile"):
         '--run-name', run_name,
         '--meta-update', meta_update,
         '--do-train',
-        '--batch-size', '1',
+        '--batch-size', '16',
         '--eval-every', '2000',
-        '--num-inner-updates', '3',
+        '--num-inner-updates', '25',
         '--num-tasks', '2'
         #"--recompute-features"
     ]

@@ -285,6 +285,7 @@ class Trainer():
                         example = train_dataloaders[task].__iter__().next()
                         optim_sub.zero_grad()
                         submodel.train()
+                        # submodel.zero_grad()
                         input_ids = example['input_ids'].to(device)
                         attention_mask = example['attention_mask'].to(device)
                         start_positions = example['start_positions'].to(device)
@@ -361,7 +362,7 @@ class Trainer():
                     progress_bar.update(len(input_ids))
                     progress_bar.set_postfix(epoch=epoch_num, NLL=loss.item())
                     tbx.add_scalar('train/NLL', loss.item(), global_idx)
-                    if (global_idx % self.eval_every) == 0:
+                    if (global_idx % self.eval_every) == 0 and global_idx > 1:
                         self.log.info(f'Evaluating at step {global_idx}...')
                         preds, curr_score = self.evaluate(model, eval_dataloader, val_dict, return_preds=True)
                         results_str = ', '.join(f'{k}: {v:05.2f}' for k, v in curr_score.items())
