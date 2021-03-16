@@ -386,7 +386,7 @@ class Trainer():
         return best_scores
 
     def init_inner_info(self, model, device):
-        if self.args.meta_update in ["reptile", "original"]:
+        if self.args.meta_update in ["reptile", "fomaml"]:
             info = dict()
             for key in model.state_dict():
                 info[key] = torch.zeros_like(model.state_dict()[key]).to(device)
@@ -425,7 +425,7 @@ class Trainer():
             for key in model.state_dict():
                 model.state_dict()[key] += self.args.meta_lr * (
                         inner_info[key] / self.args.num_tasks - model.state_dict()[key])
-        elif self.args.meta_update == "original":
+        elif self.args.meta_update == "fomaml":
             # for key in model.state_dict():
             #     model.state_dict()[key] -= self.args.meta_lr * inner_info[key] / self.args.num_tasks
             optim.zero_grad()
