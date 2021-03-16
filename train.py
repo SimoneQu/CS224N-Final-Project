@@ -308,8 +308,8 @@ class Trainer():
                     self.update_inner_info(submodel, inner_info, train_dataloaders[task], device)
                     ###
                     # key = inner_info.keys()[0]
-                    val = inner_info.values()[0]
-                    print("inner info 0", val)
+                    val = inner_info['distilbert.transformer.layer.0.attention.q_lin.bias'][:5]
+                    print("inner info check", val)
                 self.meta_update(model, optim, inner_info)
 
                 # Get best score, similar to _train_baseline
@@ -471,7 +471,7 @@ def get_dataset(datasets, data_dir, tokenizer, split_name, recompute_features):
 def main():
     # define parser and arguments
     args = get_train_test_args()
-    # args = get_debug_args("maml", "original")
+    # args = get_debug_args("maml", "fomaml")
 
     util.set_seed(args.seed)
     model = DistilBertForQuestionAnswering.from_pretrained("distilbert-base-uncased")
