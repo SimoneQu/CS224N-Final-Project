@@ -304,10 +304,10 @@ class Trainer():
 
                         loss.backward()
 
-                    for key, param in submodel.named_parameters():
-                        inner_info[key] = param.grad
-                    
-                        # optim_sub.step()
+                    # for key, param in submodel.named_parameters():
+                    #     inner_info[key] = param.grad
+
+                        optim_sub.step()
 
                     # self.update_inner_info(submodel, inner_info, train_dataloaders[task], device)
 
