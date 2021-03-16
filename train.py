@@ -303,13 +303,9 @@ class Trainer():
                         self.log.info(f'outer_loop: {global_idx}, inner_loop: {task}, {i}, {loss.data}')
 
                         loss.backward()
+                        optim_sub.step()
 
-                    for key, param in submodel.named_parameters():
-                        inner_info[key] += param.grad
-
-                        # optim_sub.step()
-
-                    # self.update_inner_info(submodel, inner_info, train_dataloaders[task], device)
+                    self.update_inner_info(submodel, inner_info, train_dataloaders[task], device)
 
                 self.meta_update(model, optim, inner_info)
 
