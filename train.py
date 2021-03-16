@@ -257,7 +257,7 @@ class Trainer():
         ###########################
         device = self.device
         model.to(device)
-
+        optim = AdamW(model.parameters(), lr=self.args.meta_lr)
         submodel = copy.deepcopy(model)
         submodel.to(device)
         optim_sub = AdamW(submodel.parameters(), lr=self.args.inner_lr)
@@ -306,7 +306,7 @@ class Trainer():
 
                     self.update_inner_info(submodel, inner_info, train_dataloaders[task], device)
 
-                self.meta_update(model, inner_info)
+                self.meta_update(model, optim, inner_info)
 
                 # Get best score, similar to _train_baseline
                 progress_bar.update(1)
@@ -420,15 +420,18 @@ class Trainer():
                 info[key] += param.grad
 
 
-    def meta_update(self, model, inner_info):
+    def meta_update(self, model, optim, inner_info):
         if self.args.meta_update == "reptile":
             for key in model.state_dict():
                 model.state_dict()[key] += self.args.meta_lr * (
                         inner_info[key] / self.args.num_tasks - model.state_dict()[key])
         elif self.args.meta_update == "original":
-            for key in model.state_dict():
-                model.state_dict()[key] -= self.args.meta_lr * inner_info[key] / self.args.num_tasks
-
+            # for key in model.state_dict():
+            #     model.state_dict()[key] -= self.args.meta_lr * inner_info[key] / self.args.num_tasks
+            optim.zero_grad()
+            for k, v in model.named_parameters():
+                v.grad = inner_info[k] / self.args.num_tasks
+            optim.step()
 
     def get_task_weights(self, example_count):
         task_weights = dict()
