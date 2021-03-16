@@ -299,8 +299,8 @@ class Trainer():
                         )
                         loss = outputs[0]
                         # if (global_idx % 1) == 0:
-                        # print('inner_loop', task, i, loss.data)
-                        self.log.info(f'outer_loop: {global_idx}, inner_loop: {task}, {i}, {loss.data}')
+                        print(f'outer_loop: {global_idx}, inner_loop: {task}, {i}, {loss.data}')
+                        # self.log.info(f'outer_loop: {global_idx}, inner_loop: {task}, {i}, {loss.data}')
 
                         loss.backward()
                         optim_sub.step()
