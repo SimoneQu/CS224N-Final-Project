@@ -306,7 +306,10 @@ class Trainer():
                         optim_sub.step()
 
                     self.update_inner_info(submodel, inner_info, train_dataloaders[task], device)
-
+                    ###
+                    # key = inner_info.keys()[0]
+                    val = inner_info.values()[0]
+                    print("inner info 0", val)
                 self.meta_update(model, optim, inner_info)
 
                 # Get best score, similar to _train_baseline
