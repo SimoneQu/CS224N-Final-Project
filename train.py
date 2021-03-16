@@ -274,8 +274,8 @@ class Trainer():
         with torch.enable_grad(), tqdm(total=num_outer_updates) as progress_bar:
             for global_idx in range(num_outer_updates):
                 # self.log.info(f'Epoch: {epoch_num}')
-                # tasks = self.sample_tasks(task_weights)
-                tasks = ['newsqa']
+                tasks = self.sample_tasks(task_weights)
+                # tasks = ['newsqa']
                 inner_info = self.init_inner_info(model, device)
                 for task in tasks:
                     # Reseting the theta back to the meta theta
@@ -306,10 +306,9 @@ class Trainer():
                         optim_sub.step()
 
                     self.update_inner_info(submodel, inner_info, train_dataloaders[task], device)
-                    ###
-                    # key = inner_info.keys()[0]
-                    val = inner_info['distilbert.transformer.layer.0.attention.q_lin.bias'][:5]
-                    print("inner info check", val)
+                    # ###
+                    # val = inner_info['distilbert.transformer.layer.0.attention.q_lin.bias'][:5]
+                    # print("inner info check", val)
                 self.meta_update(model, optim, inner_info)
 
                 # Get best score, similar to _train_baseline
@@ -407,6 +406,8 @@ class Trainer():
             model.zero_grad()
             model.train()
 
+            # key_to_print = 'distilbert.transformer.layer.0.attention.q_lin.bias'
+            # print('info before update:', info[key_to_print][:5])
             input_ids = example['input_ids'].to(device)
             attention_mask = example['attention_mask'].to(device)
             start_positions = example['start_positions'].to(device)
@@ -422,6 +423,11 @@ class Trainer():
 
             for key, param in model.named_parameters():
                 info[key] += param.grad
+                # if key == key_to_print:
+                #     print(param.grad[:5])
+
+
+            # print('info after update:', info[key_to_print][:5])
 
 
     def meta_update(self, model, optim, inner_info):
