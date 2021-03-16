@@ -274,7 +274,8 @@ class Trainer():
         with torch.enable_grad(), tqdm(total=num_outer_updates) as progress_bar:
             for global_idx in range(num_outer_updates):
                 # self.log.info(f'Epoch: {epoch_num}')
-                tasks = self.sample_tasks(task_weights)
+                # tasks = self.sample_tasks(task_weights)
+                tasks = ['newsqa']
                 inner_info = self.init_inner_info(model, device)
                 for task in tasks:
                     # Reseting the theta back to the meta theta
@@ -302,7 +303,7 @@ class Trainer():
                         self.log.info(f'outer_loop: {global_idx}, inner_loop: {task}, {i}, {loss.data}')
 
                         loss.backward()
-                        optim_sub.step()
+                        # optim_sub.step()
 
                     self.update_inner_info(submodel, inner_info, train_dataloaders[task], device)
 
@@ -398,23 +399,23 @@ class Trainer():
             for key in model.state_dict():
                 info[key] += model.state_dict()[key]
         elif self.args.meta_update == "fomaml":
-            example = dl.__iter__().next()
-
-            model.zero_grad()
-            model.train()
-
-            input_ids = example['input_ids'].to(device)
-            attention_mask = example['attention_mask'].to(device)
-            start_positions = example['start_positions'].to(device)
-            end_positions = example['end_positions'].to(device)
-            outputs = model(
-                input_ids,
-                attention_mask=attention_mask,
-                start_positions=start_positions,
-                end_positions=end_positions
-            )
-            loss = outputs[0]
-            loss.backward()
+            # example = dl.__iter__().next()
+            #
+            # model.zero_grad()
+            # model.train()
+            #
+            # input_ids = example['input_ids'].to(device)
+            # attention_mask = example['attention_mask'].to(device)
+            # start_positions = example['start_positions'].to(device)
+            # end_positions = example['end_positions'].to(device)
+            # outputs = model(
+            #     input_ids,
+            #     attention_mask=attention_mask,
+            #     start_positions=start_positions,
+            #     end_positions=end_positions
+            # )
+            # loss = outputs[0]
+            # loss.backward()
 
             for key, param in model.named_parameters():
                 info[key] += param.grad
