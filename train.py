@@ -305,7 +305,7 @@ class Trainer():
                         loss.backward()
 
                     for key, param in submodel.named_parameters():
-                        inner_info[key] = param.grad
+                        inner_info[key] += param.grad
 
                         # optim_sub.step()
 
