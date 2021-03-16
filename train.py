@@ -397,7 +397,7 @@ class Trainer():
             # info is a dict storing the sum of theta
             for key in model.state_dict():
                 info[key] += model.state_dict()[key]
-        elif self.args.meta_update == "original":
+        elif self.args.meta_update == "fomaml":
             example = dl.__iter__().next()
 
             model.zero_grad()
