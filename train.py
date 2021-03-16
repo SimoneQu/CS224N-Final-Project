@@ -399,23 +399,23 @@ class Trainer():
             for key in model.state_dict():
                 info[key] += model.state_dict()[key]
         elif self.args.meta_update == "fomaml":
-            # example = dl.__iter__().next()
-            #
-            # model.zero_grad()
-            # model.train()
-            #
-            # input_ids = example['input_ids'].to(device)
-            # attention_mask = example['attention_mask'].to(device)
-            # start_positions = example['start_positions'].to(device)
-            # end_positions = example['end_positions'].to(device)
-            # outputs = model(
-            #     input_ids,
-            #     attention_mask=attention_mask,
-            #     start_positions=start_positions,
-            #     end_positions=end_positions
-            # )
-            # loss = outputs[0]
-            # loss.backward()
+            example = dl.__iter__().next()
+
+            model.zero_grad()
+            model.train()
+
+            input_ids = example['input_ids'].to(device)
+            attention_mask = example['attention_mask'].to(device)
+            start_positions = example['start_positions'].to(device)
+            end_positions = example['end_positions'].to(device)
+            outputs = model(
+                input_ids,
+                attention_mask=attention_mask,
+                start_positions=start_positions,
+                end_positions=end_positions
+            )
+            loss = outputs[0]
+            loss.backward()
 
             for key, param in model.named_parameters():
                 info[key] += param.grad
