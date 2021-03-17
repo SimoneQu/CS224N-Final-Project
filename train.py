@@ -480,10 +480,14 @@ def main():
     # args = get_debug_args("maml", "fomaml")
 
     util.set_seed(args.seed)
-    model = DistilBertForQuestionAnswering.from_pretrained("distilbert-base-uncased")
     tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
     if args.do_train or args.do_finetune:
+        if args.model_path:
+            model = DistilBertForQuestionAnswering.from_pretrained(args.model_path)
+        else:
+            model = DistilBertForQuestionAnswering.from_pretrained("distilbert-base-uncased")
+
         if not os.path.exists(args.save_dir):
             os.makedirs(args.save_dir)
         proc = "train" if args.do_train else "finetune"
