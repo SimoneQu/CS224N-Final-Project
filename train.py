@@ -154,8 +154,10 @@ class Trainer():
         self.args.train_datasets = self.args.train_datasets.split(',') #convert this to list
         self.args.eval_datasets = self.args.eval_datasets.split(',') #convert this to list
 
-    def save(self, model):
-        model.save_pretrained(self.path)
+    def save(self, model, path=None):
+        if path is None:
+            path = self.path
+        model.save_pretrained(path)
 
     def evaluate(self, model, data_loader, data_dict, return_preds=False, split='validation'):
         device = self.device
@@ -200,7 +202,7 @@ class Trainer():
 
     def train(self, model, tokenizer):
         args = self.args
-        if args.do_finetune or (args.do_train and args.run_name == "baseline"):
+        if args.run_name == "baseline":
             if args.do_finetune:
                 assert len(args.train_datasets) == 1, "finetune should be one dataset at a time"
             print("Preparing training data...")
@@ -221,7 +223,7 @@ class Trainer():
             )
             print("Start training...")
             best_scores = self._train_baseline(model, train_loader, val_loader, val_dict)
-        elif args.run_name == "maml":
+        elif args.do_train and args.run_name == "maml":
             print("Preparing training data...")
             train_loaders = dict()
             example_count = dict()
@@ -245,6 +247,29 @@ class Trainer():
             task_weights = self.get_task_weights(example_count)
             print("Start training...")
             best_scores = self._train_maml(model, train_loaders, val_loader, val_dict, task_weights)
+        elif args.do_finetune and args.run_name == "maml":
+            # train_loaders = dict()
+            # val_loaders = dict()
+            best_scores = dict()
+            for dataset in args.train_datasets:
+                print(f"Preparing training data for {dataset}...")
+                train_dataset, _ = get_dataset([dataset], args.train_dir, tokenizer, 'train', args.recompute_features)
+                train_loader = DataLoader(
+                    train_dataset,
+                    batch_size=args.batch_size,
+                    sampler=RandomSampler(train_dataset)
+                )
+                print(f"Preparing val data for {dataset}...")
+                val_dataset, val_dict = get_dataset(args.train_datasets, args.val_dir, tokenizer, 'val', args.recompute_features)
+                val_loader = DataLoader(
+                    val_dataset,
+                    batch_size=args.batch_size,
+                    sampler=SequentialSampler(val_dataset)
+                )
+
+                print(f"Finetuning for {dataset}...")
+                model_save_path = os.path.join(self.args.save_dir, dataset, 'checkpoint')
+                best_scores[dataset] = self._train_baseline(model, train_loader, val_loader, val_dict, model_save_path)
         else:
             raise Exception
 
@@ -340,7 +365,7 @@ class Trainer():
 
         return best_scores
 
-    def _train_baseline(self, model, train_dataloader, eval_dataloader, val_dict):
+    def _train_baseline(self, model, train_dataloader, eval_dataloader, val_dict, model_save_path=None):
         device = self.device
         model.to(device)
         optim = AdamW(model.parameters(), lr=self.lr)
@@ -384,7 +409,7 @@ class Trainer():
                                            num_visuals=self.num_visuals)
                         if curr_score['F1'] >= best_scores['F1']:
                             best_scores = curr_score
-                            self.save(model)
+                            self.save(model, model_save_path)
                     global_idx += 1
         return best_scores
 
