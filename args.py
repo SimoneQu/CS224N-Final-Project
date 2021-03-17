@@ -24,6 +24,8 @@ def init_parser():
     parser.add_argument('--visualize-predictions', action='store_true')
     parser.add_argument('--eval-every', type=int, default=5000)
 
+    parser.add_argument('--model-path', type=str)
+
     ## maml specific
     parser.add_argument('--num-inner-updates', type=int, default=5)
     parser.add_argument('--num-tasks', type=int, default=8)
@@ -46,9 +48,9 @@ def get_debug_args(run_name="maml", meta_update="reptile"):
         '--run-name', run_name,
         '--meta-update', meta_update,
         '--do-train',
-        '--batch-size', '16',
+        '--batch-size', '1',
         '--eval-every', '2000',
-        '--num-inner-updates', '25',
+        '--num-inner-updates', '3',
         '--num-tasks', '2'
         #"--recompute-features"
     ]
