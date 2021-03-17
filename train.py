@@ -315,7 +315,7 @@ class Trainer():
                 progress_bar.update(1)
                 progress_bar.set_postfix(num_outer_update=global_idx, NLL=loss.item())
                 tbx.add_scalar('train/NLL', loss.item(), global_idx)
-                if (global_idx % self.eval_every) == 0 and global_idx > 1:
+                if (global_idx % self.eval_every) == 0:# and global_idx > 1:
                     self.log.info(f'Evaluating after {global_idx} rounds of MAML...')
                     preds, curr_score = self.evaluate(model, eval_dataloader, val_dict, return_preds=True)
                     results_str = ', '.join(f'{k}: {v:05.2f}' for k, v in curr_score.items())
