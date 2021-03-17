@@ -203,8 +203,6 @@ class Trainer():
     def train(self, model, tokenizer):
         args = self.args
         if args.run_name == "baseline":
-            if args.do_finetune:
-                assert len(args.train_datasets) == 1, "finetune should be one dataset at a time"
             print("Preparing training data...")
             train_dataset, _ = get_dataset(
                 args.train_datasets, args.train_dir, tokenizer, 'train', args.recompute_features)
