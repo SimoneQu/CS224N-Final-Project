@@ -258,7 +258,7 @@ class Trainer():
                     sampler=RandomSampler(train_dataset)
                 )
                 print(f"Preparing val data for {dataset}...")
-                val_dataset, val_dict = get_dataset(args.train_datasets, args.val_dir, tokenizer, 'val', args.recompute_features)
+                val_dataset, val_dict = get_dataset([dataset], args.val_dir, tokenizer, 'val', args.recompute_features)
                 val_loader = DataLoader(
                     val_dataset,
                     batch_size=args.batch_size,
