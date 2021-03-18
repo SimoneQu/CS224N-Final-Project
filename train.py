@@ -205,27 +205,20 @@ class Trainer():
             return preds, results
         return results
 
-    def train(self, model, tokenizer):
+    def train(self, tokenizer):
         args = self.args
         if args.run_name == "baseline":
             print("Preparing training data...")
-            train_dataset, _ = get_dataset(
-                args.train_datasets, args.train_dir, tokenizer, 'train', args.recompute_features)
-            train_loader = DataLoader(
-                train_dataset,
-                batch_size=args.batch_size,
-                sampler=RandomSampler(train_dataset)
-            )
+            train_dataset, _ = get_dataset(args.train_datasets, args.train_dir, tokenizer, 'train', args.recompute_features)
+            train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=RandomSampler(train_dataset))
+
             print("Preparing validation data...")
-            val_dataset, val_dict = get_dataset(
-                args.train_datasets, args.val_dir, tokenizer, 'val', args.recompute_features)
-            val_loader = DataLoader(
-                val_dataset,
-                batch_size=args.batch_size,
-                sampler=SequentialSampler(val_dataset)
-            )
+            val_dataset, val_dict = get_dataset(args.train_datasets, args.val_dir, tokenizer, 'val', args.recompute_features)
+            val_loader = DataLoader(val_dataset, batch_size=args.batch_size, sampler=SequentialSampler(val_dataset))
+
             print("Start training...")
-            best_scores = self._train_baseline(model, train_loader, val_loader, val_dict)
+            best_scores, _ = self._train_baseline(train_loader, val_loader, val_dict)
+
         elif args.do_train and args.run_name == "maml":
             print("Preparing training data...")
             train_loaders = dict()
@@ -233,57 +226,32 @@ class Trainer():
             for dataset in args.train_datasets:
                 train_dataset, _ = get_dataset([dataset], args.train_dir, tokenizer, 'train', args.recompute_features)
                 example_count[dataset] = len(train_dataset)
-                train_loader = DataLoader(
-                    train_dataset,
-                    batch_size=args.batch_size,
-                    sampler=RandomSampler(train_dataset)
-                )
+                train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=RandomSampler(train_dataset))
                 train_loaders[dataset] = train_loader
+
             print("Preparing validation data...")
             val_dataset, val_dict = get_dataset(args.train_datasets, args.val_dir, tokenizer, 'val', args.recompute_features)
-            val_loader = DataLoader(
-                val_dataset,
-                batch_size=args.batch_size,
-                sampler=SequentialSampler(val_dataset)
-            )
+            val_loader = DataLoader( val_dataset, batch_size=args.batch_size, sampler=SequentialSampler(val_dataset))
             self.total_train_examples = sum(example_count.values())
             task_weights = self.get_task_weights(example_count)
-            print("Start training...")
-            best_scores = self._train_maml(model, train_loaders, val_loader, val_dict, task_weights)
-        elif args.do_finetune and args.run_name == "maml":
-            # train_loaders = dict()
-            # val_loaders = dict()
-            best_scores = dict()
-            for dataset in args.train_datasets:
-                print(f"Preparing training data for {dataset}...")
-                train_dataset, _ = get_dataset([dataset], args.train_dir, tokenizer, 'train', args.recompute_features)
-                train_loader = DataLoader(
-                    train_dataset,
-                    batch_size=args.batch_size,
-                    sampler=RandomSampler(train_dataset)
-                )
-                print(f"Preparing val data for {dataset}...")
-                val_dataset, val_dict = get_dataset([dataset], args.val_dir, tokenizer, 'val', args.recompute_features)
-                val_loader = DataLoader(
-                    val_dataset,
-                    batch_size=args.batch_size,
-                    sampler=SequentialSampler(val_dataset)
-                )
 
-                print(f"Finetuning for {dataset}...")
-                model_save_path = os.path.join(self.args.save_dir, dataset, 'checkpoint')
-                best_scores[dataset] = self._train_baseline(model, train_loader, val_loader, val_dict, model_save_path)
+            print("Start training...")
+            best_scores = self._train_maml(train_loaders, val_loader, val_dict, task_weights)
+
+        elif args.do_finetune and args.run_name == "maml":
+            best_scores = self._finetune_maml(tokenizer)
         else:
             raise Exception
 
         return best_scores
 
-    def _train_maml(self, model, train_dataloaders, eval_dataloader, val_dict, task_weights):
+    def _train_maml(self, train_dataloaders, eval_dataloader, val_dict, task_weights):
 
         ###########################
         # Pretrain using Meta-Learning
         ###########################
         device = self.device
+        model = self.load_model()
         model.to(device)
         optim = AdamW(model.parameters(), lr=self.args.meta_lr)
         submodel = copy.deepcopy(model)
@@ -369,12 +337,14 @@ class Trainer():
 
         return best_scores
 
-    def _train_baseline(self, model, train_dataloader, eval_dataloader, val_dict, model_save_path=None):
+    def _train_baseline(self, train_dataloader, eval_dataloader, val_dict, model_save_path=None):
         device = self.device
+        model = self.load_model()
         model.to(device)
         optim = AdamW(model.parameters(), lr=self.lr)
         global_idx = 0
         best_scores = {'F1': -1.0, 'EM': -1.0}
+        best_preds = None
         tbx = SummaryWriter(self.save_dir)
 
         for epoch_num in range(self.num_epochs):
@@ -413,9 +383,46 @@ class Trainer():
                                            num_visuals=self.num_visuals)
                         if curr_score['F1'] >= best_scores['F1']:
                             best_scores = curr_score
+                            best_preds = preds
                             self.save(model, model_save_path)
                     global_idx += 1
+        return best_scores, best_preds
+
+    def _finetune_maml(self, tokenizer):
+        args = self.args
+        best_scores = dict()
+        all_predictions = OrderedDict()
+        all_val_dict = dict()
+        for dataset in args.train_datasets:
+            print(f"Preparing training data for {dataset}...")
+            train_dataset, _ = get_dataset([dataset], args.train_dir, tokenizer, 'train', args.recompute_features)
+            train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=RandomSampler(train_dataset))
+
+            print(f"Preparing val data for {dataset}...")
+            val_dataset, val_dict = get_dataset([dataset], args.val_dir, tokenizer, 'val', args.recompute_features)
+            val_loader = DataLoader(val_dataset, batch_size=args.batch_size, sampler=SequentialSampler(val_dataset))
+            all_val_dict.update(val_dict)
+
+            print(f"Finetuning for {dataset}...")
+            model_save_path = os.path.join(self.args.save_dir, dataset, 'checkpoint')
+            best_scores[dataset], preds = self._train_baseline(train_loader, val_loader, val_dict, model_save_path)
+            all_predictions.update(preds)
+
+            # print(f"Evaluating for {dataset}")
+            # pred, _ = self.evaluate(model, val_loader, val_dict, return_preds=True)
+
+        # get the overall score
+        best_scores["overall"] = util.eval_dicts(all_val_dict, all_predictions)
         return best_scores
+
+    def load_model(self):
+        if self.args.model_path:
+            model_path = self.args.model_path
+        else:
+            model_path = "distilbert-base-uncased"
+
+        model = DistilBertForQuestionAnswering.from_pretrained(model_path)
+        return model
 
     def init_inner_info(self, model, device):
         if self.args.meta_update in ["reptile", "fomaml"]:
@@ -512,11 +519,6 @@ def main():
     tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
     if args.do_train or args.do_finetune:
-        if args.model_path:
-            model = DistilBertForQuestionAnswering.from_pretrained(args.model_path)
-        else:
-            model = DistilBertForQuestionAnswering.from_pretrained("distilbert-base-uncased")
-
         if not os.path.exists(args.save_dir):
             os.makedirs(args.save_dir)
         proc = "train" if args.do_train else "finetune"
@@ -525,7 +527,7 @@ def main():
         log.info(f'Args: {json.dumps(vars(args), indent=4, sort_keys=True)}')
         args.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         trainer = Trainer(args, log)
-        best_scores = trainer.train(model, tokenizer)
+        best_scores = trainer.train(tokenizer)
         print(f"Finished {proc}, the best score is {best_scores}")
     if args.do_eval:
         args.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
