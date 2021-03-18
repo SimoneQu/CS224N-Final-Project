@@ -150,6 +150,11 @@ class Trainer():
         if not os.path.exists(self.path):
             os.makedirs(self.path)
 
+        if args.run_name == "maml":
+            self.path_all = os.path.join(args.save_dir, 'checkpoint_all')
+            if not os.path.exists(self.path_all):
+                os.makedirs(self.path_all)
+
         self.args = args
         self.args.train_datasets = self.args.train_datasets.split(',') #convert this to list
         self.args.eval_datasets = self.args.eval_datasets.split(',') #convert this to list
@@ -322,8 +327,8 @@ class Trainer():
                         )
                         loss = outputs[0]
                         # if (global_idx % 1) == 0:
-                        print(f'outer_loop: {global_idx}, inner_loop: {task}, {i}, {loss.data}')
-                        # self.log.info(f'outer_loop: {global_idx}, inner_loop: {task}, {i}, {loss.data}')
+                        # print(f'outer_loop: {global_idx}, inner_loop: {task}, {i}, {loss.data}')
+                        self.log.info(f'outer_loop: {global_idx}, inner_loop: {task}, {i}, {loss.data}')
 
                         loss.backward()
                         optim_sub.step()
@@ -333,6 +338,7 @@ class Trainer():
                     # val = inner_info['distilbert.transformer.layer.0.attention.q_lin.bias'][:5]
                     # print("inner info check", val)
                 self.meta_update(model, optim, inner_info)
+                self.save(model, self.path_all)
 
                 # Get best score, similar to _train_baseline
                 progress_bar.update(1)
@@ -547,7 +553,6 @@ def main():
             csv_writer.writerow(['Id', 'Predicted'])
             for uuid in sorted(eval_preds):
                 csv_writer.writerow([uuid, eval_preds[uuid]])
-
 
 if __name__ == '__main__':
     main()
