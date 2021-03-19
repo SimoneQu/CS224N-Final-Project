@@ -150,7 +150,7 @@ class Trainer():
         if not os.path.exists(self.path):
             os.makedirs(self.path)
 
-        if args.run_name == "maml" and args.do_finetune:
+        if args.run_name == "maml" and args.do_train:
             self.path_all = os.path.join(args.save_dir, 'checkpoint_all')
             if not os.path.exists(self.path_all):
                 os.makedirs(self.path_all)
