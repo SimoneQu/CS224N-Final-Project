@@ -150,7 +150,7 @@ class Trainer():
         if not os.path.exists(self.path):
             os.makedirs(self.path)
 
-        if args.run_name == "maml":
+        if args.run_name == "maml" and args.do_finetune:
             self.path_all = os.path.join(args.save_dir, 'checkpoint_all')
             if not os.path.exists(self.path_all):
                 os.makedirs(self.path_all)
@@ -366,7 +366,7 @@ class Trainer():
                     progress_bar.update(len(input_ids))
                     progress_bar.set_postfix(epoch=epoch_num, NLL=loss.item())
                     tbx.add_scalar('train/NLL', loss.item(), global_idx)
-                    if (global_idx % self.eval_every) == 0 and global_idx > 1:
+                    if (global_idx % self.eval_every) == 0:
                         self.log.info(f'Evaluating at step {global_idx}...')
                         preds, curr_score = self.evaluate(model, eval_dataloader, val_dict, return_preds=True)
                         results_str = ', '.join(f'{k}: {v:05.2f}' for k, v in curr_score.items())
@@ -401,13 +401,12 @@ class Trainer():
             print(f"Preparing val data for {dataset}...")
             val_dataset, val_dict = get_dataset([dataset], args.val_dir, tokenizer, 'val', args.recompute_features)
             val_loader = DataLoader(val_dataset, batch_size=args.batch_size, sampler=SequentialSampler(val_dataset))
-            all_val_dict.update(val_dict)
+            all_val_dict = util.merge(all_val_dict, val_dict)
 
             print(f"Finetuning for {dataset}...")
             model_save_path = os.path.join(self.args.save_dir, dataset, 'checkpoint')
             best_scores[dataset], preds = self._train_baseline(train_loader, val_loader, val_dict, model_save_path)
             all_predictions.update(preds)
-
             # print(f"Evaluating for {dataset}")
             # pred, _ = self.evaluate(model, val_loader, val_dict, return_preds=True)
 
@@ -510,10 +509,68 @@ def get_dataset(datasets, data_dir, tokenizer, split_name, recompute_features):
     data_encodings = read_and_process(tokenizer, dataset_dict, data_dir, dataset_name, split_name, recompute_features)
     return util.QADataset(data_encodings, train=(split_name=='train')), dataset_dict
 
+def eval_baseline(args, tokenizer):
+    args.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    split_name = 'test' if 'test' in args.eval_dir else 'validation'
+    log = util.get_logger(args.save_dir, f'log_{split_name}')
+    trainer = Trainer(args, log)
+    checkpoint_path = os.path.join(args.save_dir, 'checkpoint')
+    model = DistilBertForQuestionAnswering.from_pretrained(checkpoint_path)
+    model.to(args.device)
+    eval_dataset, eval_dict = get_dataset(
+        args.eval_datasets, args.eval_dir, tokenizer, split_name, args.recompute_features)
+    eval_loader = DataLoader(eval_dataset,
+                             batch_size=args.batch_size,
+                             sampler=SequentialSampler(eval_dataset))
+    eval_preds, eval_scores = trainer.evaluate(model, eval_loader,
+                                               eval_dict, return_preds=True,
+                                               split=split_name)
+    results_str = ', '.join(f'{k}: {v:05.2f}' for k, v in eval_scores.items())
+    log.info(f'Eval {results_str}')
+    # Write submission file
+    sub_path = os.path.join(args.save_dir, split_name + '_' + args.sub_file)
+    log.info(f'Writing submission file to {sub_path}...')
+    with open(sub_path, 'w', newline='', encoding='utf-8') as csv_fh:
+        csv_writer = csv.writer(csv_fh, delimiter=',')
+        csv_writer.writerow(['Id', 'Predicted'])
+        for uuid in sorted(eval_preds):
+            csv_writer.writerow([uuid, eval_preds[uuid]])
+
+def eval_maml(args, tokenizer):
+
+    args.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    log = util.get_logger(args.save_dir, 'log_test')
+    trainer = Trainer(args, log)
+    all_predictions = OrderedDict()
+
+    for dataset in args.eval_datasets:
+        print(f"Preparing eval data for {dataset}...")
+        eval_dataset, eval_dict = get_dataset(
+            [dataset], args.eval_dir, tokenizer, 'test', args.recompute_features)
+        eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, sampler=SequentialSampler(eval_dataset))
+
+        checkpoint_path = os.path.join(args.model_path, dataset, 'checkpoint')
+        model = DistilBertForQuestionAnswering.from_pretrained(checkpoint_path)
+        model.to(args.device)
+
+        preds, _ = trainer.evaluate(model, eval_loader, eval_dict, return_preds=True, split='test')
+        all_predictions.update(preds)
+
+    # Write submission file
+    sub_path = os.path.join(args.model_path, args.sub_file)
+    log.info(f'Writing submission file to {sub_path}...')
+    with open(sub_path, 'w', newline='', encoding='utf-8') as csv_fh:
+        csv_writer = csv.writer(csv_fh, delimiter=',')
+        csv_writer.writerow(['Id', 'Predicted'])
+        for uuid in sorted(all_predictions):
+            csv_writer.writerow([uuid, all_predictions[uuid]])
+
+    return
+
 def main():
     # define parser and arguments
-    args = get_train_test_args()
-    # args = get_debug_args("maml", "fomaml")
+    # args = get_train_test_args()
+    args = get_debug_args("maml", "fomaml", "do_eval")
 
     util.set_seed(args.seed)
     tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
@@ -529,32 +586,11 @@ def main():
         trainer = Trainer(args, log)
         best_scores = trainer.train(tokenizer)
         print(f"Finished {proc}, the best score is {best_scores}")
-    if args.do_eval:
-        args.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        split_name = 'test' if 'test' in args.eval_dir else 'validation'
-        log = util.get_logger(args.save_dir, f'log_{split_name}')
-        trainer = Trainer(args, log)
-        checkpoint_path = os.path.join(args.save_dir, 'checkpoint')
-        model = DistilBertForQuestionAnswering.from_pretrained(checkpoint_path)
-        model.to(args.device)
-        eval_dataset, eval_dict = get_dataset(
-            args.eval_datasets, args.eval_dir, tokenizer, split_name, args.recompute_features)
-        eval_loader = DataLoader(eval_dataset,
-                                 batch_size=args.batch_size,
-                                 sampler=SequentialSampler(eval_dataset))
-        eval_preds, eval_scores = trainer.evaluate(model, eval_loader,
-                                                   eval_dict, return_preds=True,
-                                                   split=split_name)
-        results_str = ', '.join(f'{k}: {v:05.2f}' for k, v in eval_scores.items())
-        log.info(f'Eval {results_str}')
-        # Write submission file
-        sub_path = os.path.join(args.save_dir, split_name + '_' + args.sub_file)
-        log.info(f'Writing submission file to {sub_path}...')
-        with open(sub_path, 'w', newline='', encoding='utf-8') as csv_fh:
-            csv_writer = csv.writer(csv_fh, delimiter=',')
-            csv_writer.writerow(['Id', 'Predicted'])
-            for uuid in sorted(eval_preds):
-                csv_writer.writerow([uuid, eval_preds[uuid]])
+    elif args.do_eval:
+        if args.run_name == "baseline":
+            eval_baseline(args, tokenizer)
+        elif args.run_name == "maml":
+            eval_maml(args, tokenizer)
 
 if __name__ == '__main__':
     main()

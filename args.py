@@ -41,19 +41,40 @@ def get_train_test_args():
     args = parser.parse_args()
     return args
 
-def get_debug_args(run_name="maml", meta_update="reptile"):
+def get_debug_args(run_name="maml", meta_update="reptile", fun="do_train"):
     parser = init_parser()
-
-    input = [
-        '--run-name', run_name,
-        '--meta-update', meta_update,
-        '--do-train',
-        '--batch-size', '1',
-        '--eval-every', '2000',
-        '--num-inner-updates', '3',
-        '--num-tasks', '2'
-        #"--recompute-features"
-    ]
+    if fun == "do_train":
+        input = [
+            '--run-name', run_name,
+            '--meta-update', meta_update,
+            '--do-train',
+            '--batch-size', '1',
+            '--eval-every', '2000',
+            '--num-inner-updates', '3',
+            '--num-tasks', '2'
+            #"--recompute-features"
+        ]
+    elif fun == "do_finetuen":
+        input = [
+            '--run-name', run_name,
+            '--meta-update', meta_update,
+            '--do-finetune',
+            '--batch-size', '1',
+            '--eval-every', '2000',
+            '--num-inner-updates', '3',
+            '--num-tasks', '2',
+            '--train-dir', 'datasets/oodomain_train',
+            '--val-dir', 'datasets/oodomain_val',
+            '--train-datasets', 'duorc,race,relation_extraction'
+            #"--recompute-features"
+        ]
+    elif fun == "do_eval":
+        input = [
+            '--run-name', run_name,
+            '--do-eval',
+            '--sub-file', 'submission.csv',
+            '--model-path', 'save/maml_finetune-11',
+        ]
     args = parser.parse_args(input)
     return args
 
