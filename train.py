@@ -569,8 +569,8 @@ def eval_maml(args, tokenizer):
 
 def main():
     # define parser and arguments
-    # args = get_train_test_args()
-    args = get_debug_args("maml", "fomaml", "do_eval")
+    args = get_train_test_args()
+    # args = get_debug_args("maml", "fomaml", "do_eval")
 
     util.set_seed(args.seed)
     tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
