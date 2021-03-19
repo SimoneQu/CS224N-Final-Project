@@ -412,6 +412,7 @@ class Trainer():
 
         # get the overall score
         best_scores["overall"] = util.eval_dicts(all_val_dict, all_predictions)
+        self.log.info('Scores:', best_scores)
         return best_scores
 
     def load_model(self):
