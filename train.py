@@ -333,8 +333,7 @@ class Trainer():
                 global_idx += 1
 
         # Storing away the final parameters for later use
-        self.save(model)
-
+        # self.save(model)
         return best_scores
 
     def _train_baseline(self, train_dataloader, eval_dataloader, val_dict, model_save_path=None):
@@ -571,7 +570,7 @@ def eval_maml(args, tokenizer):
 def main():
     # define parser and arguments
     args = get_train_test_args()
-    # args = get_debug_args("maml", "fomaml", "do_eval")
+    # args = get_debug_args("maml", "fomaml", "do_finetune")
 
     util.set_seed(args.seed)
     tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')

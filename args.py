@@ -54,7 +54,7 @@ def get_debug_args(run_name="maml", meta_update="reptile", fun="do_train"):
             '--num-tasks', '2'
             #"--recompute-features"
         ]
-    elif fun == "do_finetuen":
+    elif fun == "do_finetune":
         input = [
             '--run-name', run_name,
             '--meta-update', meta_update,
@@ -65,7 +65,8 @@ def get_debug_args(run_name="maml", meta_update="reptile", fun="do_train"):
             '--num-tasks', '2',
             '--train-dir', 'datasets/oodomain_train',
             '--val-dir', 'datasets/oodomain_val',
-            '--train-datasets', 'duorc,race,relation_extraction'
+            '--train-datasets', 'duorc,race,relation_extraction',
+            '--model-path', 'save/maml_train-55/checkpoint'
             #"--recompute-features"
         ]
     elif fun == "do_eval":
@@ -73,7 +74,7 @@ def get_debug_args(run_name="maml", meta_update="reptile", fun="do_train"):
             '--run-name', run_name,
             '--do-eval',
             '--sub-file', 'submission.csv',
-            '--model-path', 'save/maml_finetune-11',
+            '--model-path', 'save/maml_train-55/checkpoint_all',
         ]
     args = parser.parse_args(input)
     return args
